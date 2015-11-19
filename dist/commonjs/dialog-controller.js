@@ -6,6 +6,11 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
 var _lifecycle = require('./lifecycle');
 
+var _util = require('./util');
+
+var GLOBAL_ACTIVE_CLASS = 'ai-dialog-active';
+var ELEMENT_ACTIVE_CLASS = 'active';
+
 var DialogController = (function () {
   function DialogController(renderer, settings, resolve, reject) {
     _classCallCheck(this, DialogController);
@@ -25,34 +30,31 @@ var DialogController = (function () {
   };
 
   DialogController.prototype.error = function error(message) {
-    var _this = this;
-
-    return _lifecycle.invokeLifecycle(this.viewModel, 'deactivate').then(function () {
-      return _this._renderer.hideDialog(_this).then(function () {
-        return _this._renderer.destroyDialogHost(_this).then(function () {
-          _this.controller.unbind();
-          _this._reject(message);
-        });
-      });
-    });
+    return this._renderer.deactivateLifecycle(this, message);
   };
 
   DialogController.prototype.close = function close(ok, result) {
-    var _this2 = this;
-
     var returnResult = new DialogResult(!ok, result);
-    return _lifecycle.invokeLifecycle(this.viewModel, 'canDeactivate').then(function (canDeactivate) {
-      if (canDeactivate) {
-        return _lifecycle.invokeLifecycle(_this2.viewModel, 'deactivate').then(function () {
-          return _this2._renderer.hideDialog(_this2).then(function () {
-            return _this2._renderer.destroyDialogHost(_this2).then(function () {
-              _this2.controller.unbind();
-              _this2._resolve(returnResult);
-            });
-          });
-        });
-      }
-    });
+    return this._renderer.deactivateLifecycle(this, returnResult);
+  };
+
+  DialogController.prototype.showDialog = function showDialog() {
+    return this.handleAnimations(true);
+  };
+
+  DialogController.prototype.hideDialog = function hideDialog() {
+    return this.handleAnimations(false);
+  };
+
+  DialogController.prototype.handleAnimations = function handleAnimations(value) {
+    var toggle = value ? 'add' : 'remove';
+    var element = this.element;
+    return _util.handleEventListeners(element, 'animationend', trigger);
+
+    function trigger() {
+      element.classList[toggle](ELEMENT_ACTIVE_CLASS);
+      document.body.classList[toggle](GLOBAL_ACTIVE_CLASS);
+    }
   };
 
   return DialogController;

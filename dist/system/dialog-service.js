@@ -1,7 +1,7 @@
-System.register(['aurelia-metadata', 'aurelia-dependency-injection', 'aurelia-templating', './dialog-controller', './dialog-renderer', './lifecycle'], function (_export) {
+System.register(['aurelia-metadata', 'aurelia-dependency-injection', 'aurelia-templating', './dialog-controller', './dialog-renderer', './lifecycle', './models/alert'], function (_export) {
   'use strict';
 
-  var Origin, Container, CompositionEngine, DialogController, DialogRenderer, invokeLifecycle, DialogService;
+  var Origin, Container, CompositionEngine, DialogController, DialogRenderer, invokeLifecycle, Alert, DialogService;
 
   var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
 
@@ -20,6 +20,8 @@ System.register(['aurelia-metadata', 'aurelia-dependency-injection', 'aurelia-te
       DialogRenderer = _dialogRenderer.DialogRenderer;
     }, function (_lifecycle) {
       invokeLifecycle = _lifecycle.invokeLifecycle;
+    }, function (_modelsAlert) {
+      Alert = _modelsAlert.Alert;
     }],
     execute: function () {
       DialogService = (function () {
@@ -49,42 +51,42 @@ System.register(['aurelia-metadata', 'aurelia-dependency-injection', 'aurelia-te
           return Promise.resolve(instruction);
         };
 
-        DialogService.prototype.open = function open(settings) {
+        DialogService.prototype.createViewModel = function createViewModel(Controller, settings, instruction) {
           var _this = this;
 
-          var _settings = Object.assign({}, this.renderer.defaultSettings, settings);
-
+          var controller;
           return new Promise(function (resolve, reject) {
-            var childContainer = _this.container.createChild();
-            var dialogController = new DialogController(_this.renderer, _settings, resolve, reject);
-            var instruction = {
-              viewModel: _settings.viewModel,
-              container: _this.container,
-              childContainer: childContainer,
-              model: _settings.model
-            };
-
-            childContainer.registerInstance(DialogController, dialogController);
+            controller = new Controller(_this.renderer, settings, resolve, reject);
+            instruction.childContainer.registerInstance(Controller, controller);
 
             return _this._getViewModel(instruction).then(function (returnedInstruction) {
-              dialogController.viewModel = returnedInstruction.viewModel;
-
-              return invokeLifecycle(returnedInstruction.viewModel, 'canActivate', _settings.model).then(function (canActivate) {
-                if (canActivate) {
-                  return _this.compositionEngine.createController(returnedInstruction).then(function (controller) {
-                    dialogController.controller = controller;
-                    dialogController.view = controller.view;
-                    controller.automate();
-
-                    return _this.renderer.createDialogHost(dialogController).then(function () {
-                      return _this.renderer.showDialog(dialogController);
-                    });
-                  });
-                }
-              });
+              return _this.renderer.activateLifecycle(controller, returnedInstruction, instruction.model, resolve);
             });
           });
         };
+
+        DialogService.prototype.open = function open(_settings) {
+          var viewModel = _settings.viewModel;
+          var model = _settings.model;
+          var container = this.container;
+          var settings = Object.assign({}, this.defaultSettings, _settings, this.config);
+          var instruction = {
+            viewModel: _settings.viewModel,
+            container: this.container,
+            childContainer: this.container.createChild(),
+            model: _settings.model
+          };
+          return this.createViewModel(DialogController, settings, instruction);
+        };
+
+        DialogService.prototype.alert = function alert(_settings) {
+          return this.open({
+            viewModel: Alert,
+            model: _settings
+          });
+        };
+
+        DialogService.prototype.close = function close() {};
 
         return DialogService;
       })();
